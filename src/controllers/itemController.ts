@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { items, type Item } from '../models/item.ts';
+import { items, type Item } from '../models/item.js';
 
 export const createItem = (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -62,7 +62,7 @@ export const updateItem = (req: Request, res: Response, next: NextFunction) => {
       res.status(404).json({ message: 'Item not found' });
       return;
     }
-    items[itemIndex].name = name;
+    items[itemIndex]!.name = name; // Dùng dấu ! để khẳng định chắc chắn tồn tại
     res.json(items[itemIndex]);
   } catch (error) {
     next(error);
