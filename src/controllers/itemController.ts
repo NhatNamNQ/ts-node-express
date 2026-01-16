@@ -1,33 +1,45 @@
 import type { Request, Response, NextFunction } from 'express';
-import { items, type Item } from '../models/item.js';
+import { AppDataSource } from '../config/database.js';
+import { Item } from '../entities/Item.js';
 
-export const createItem = (req: Request, res: Response, next: NextFunction) => {
+const itemRepo = AppDataSource.getRepository(Item);
+
+export const createItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { name } = req.body;
-    const newItem: Item = { id: Date.now(), name };
-    items.push(newItem);
-    res.status(201).json(newItem);
+    const newItem = itemRepo.create({ name });
+    const savedItem = await itemRepo.save(newItem);
+    res.status(201).json(savedItem);
   } catch (error) {
     next(error);
   }
 };
 
-export const getItems = (req: Request, res: Response, next: NextFunction) => {
+export const getItems = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
+    const items = await itemRepo.find();
     res.json(items);
   } catch (error) {
     next(error);
   }
 };
 
-export const getItemById = (
-  req: Request<{ id: string }>,
+export const getItemById = async (
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const item = items.find((i) => i.id === id);
+    const { id } = req.params;
+    const item = await itemRepo.findOne({ where: { id: Number(id) } });
     if (!item) {
       res.status(404).json({ message: 'Item not found' });
       return;
@@ -38,32 +50,41 @@ export const getItemById = (
   }
 };
 
-export const deleteItem = (req: Request, res: Response, next: NextFunction) => {
+export const deleteItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const id = parseInt(req.params.id as string, 10);
-    const itemIndex = items.findIndex((i) => i.id === id);
-    if (itemIndex === -1) {
+    const { id } = req.params;
+    const item = await itemRepo.findOne({ where: { id: Number(id) } });
+    if (!item) {
       res.status(404).json({ message: 'Item not found' });
       return;
     }
-    const deletedItem = items.splice(itemIndex, 1)[0];
-    res.json(deletedItem);
+    await itemRepo.remove(item);
+    res.status(204).json({ message: 'Item deleted' });
   } catch (error) {
     next(error);
   }
 };
 
-export const updateItem = (req: Request, res: Response, next: NextFunction) => {
+export const updateItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const { id } = req.params;
     const { name } = req.body;
-    const itemIndex = items.findIndex((i) => i.id === id);
-    if (itemIndex === -1) {
+    const item = await itemRepo.findOne({ where: { id: Number(id) } });
+    if (!item) {
       res.status(404).json({ message: 'Item not found' });
       return;
     }
-    items[itemIndex]!.name = name; // Dùng dấu ! để khẳng định chắc chắn tồn tại
-    res.json(items[itemIndex]);
+    item.name = name;
+    await itemRepo.save(item);
+    res.json(item);
   } catch (error) {
     next(error);
   }
